@@ -7,10 +7,10 @@ def home(request):
     results = None
 
     if request.method == "POST":
-        role = request.POST.get("role", "").lower()
-        query = request.POST.get("specialization", "").lower()
+        role = request.POST.get("role", "").strip().lower()
+        query = request.POST.get("specialization", "").strip().lower()
 
-        # AI keyword mapping (heart -> cardio etc.)
+        # AI keyword mapping
         AI_MAP = {
             "heart": "cardio",
             "cardiac": "cardio",
@@ -24,16 +24,27 @@ def home(request):
             "finance": "accountant",
         }
 
+        # Normalize query using AI mapping
         for key, value in AI_MAP.items():
             if key in query:
                 query = value
                 break
 
-        results = Profile.objects.filter(
-            role__icontains=role
-        ).filter(
-            Q(specialization__icontains=query) |
-            Q(details__icontains=query)
-        )
+        queryset = Profile.objects.all()
 
-    return render(request, "app1/home.html", {"results": results})
+        # Apply role filter ONLY if role exists
+        if role:
+            queryset = queryset.filter(role__iexact=role)
+
+        # Apply search filter ONLY if query exists
+        if query:
+            queryset = queryset.filter(
+                Q(specialization__icontains=query) |
+                Q(details__icontains=query)
+            )
+
+        results = queryset
+
+    return render(request, "app1/home.html", {
+        "results": results
+    })
